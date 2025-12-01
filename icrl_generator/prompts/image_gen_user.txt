@@ -1,0 +1,5 @@
+Create a vivid, image prompt based on the thought of the day. Try to use specific elements from the message to generate the image.
+
+# Thought
+
+{thought}

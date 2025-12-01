@@ -1,0 +1,31 @@
+[project]
+name = "icrl_generator"
+version = "0.1.0"
+description = "Generate ICRL thought-of-the-day images using LiteLLM, PIL, and Typer."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Michael Honaker" }
+]
+
+dependencies = [
+    "requests",
+    "beautifulsoup4",
+    "litellm",
+    "pillow",
+    "typer[all]",
+]
+
+[project.scripts]
+icrl-gen = "icrl_generator:APP"
+
+[tool.setuptools]
+packages = ["icrl_generator"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+icrl_generator = ["prompts/*.txt"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
