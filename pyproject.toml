@@ -1,12 +1,12 @@
 [project]
 name = "icrl_generator"
-version = "0.1.0"
 description = "Generate ICRL thought-of-the-day images using LiteLLM, PIL, and Typer."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
     { name = "Michael Honaker" }
 ]
+dynamic = ["version"]
 
 dependencies = [
     "requests",
@@ -27,5 +27,9 @@ include-package-data = true
 icrl_generator = ["prompts/*.txt"]
 
 [build-system]
-requires = ["setuptools>=61"]
+requires = [
+    "setuptools>=69",
+    "setuptools-scm",
+    "wheel"
+]
 build-backend = "setuptools.build_meta"
