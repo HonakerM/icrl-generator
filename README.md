@@ -40,6 +40,7 @@ After installation, you can run the following command to generate an image.
 
 Linux:
 ```bash
+export OPENAI_API_KEY = "<openai-api-key>"
 icrl-gen \
     --image-prompt-output image-prompt.txt \
     --raw-image-output raw_image.png \
@@ -49,6 +50,7 @@ icrl-gen \
 ```
 Windows:
 ```powershell
+$env:OPENAI_API_KEY = "<openai-api-key>"   
 icrl-gen `
     --image-prompt-output image-prompt.txt `
     --raw-image-output raw_image.png `
