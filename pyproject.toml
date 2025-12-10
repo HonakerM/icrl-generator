@@ -17,6 +17,9 @@ dependencies = [
     "tqdm",
 ]
 
+[project.optional-dependencies]
+aws = ["awslambdaric"]
+
 [project.scripts]
 icrl-gen = "icrl_generator:APP"
 
