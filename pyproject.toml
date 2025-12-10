@@ -25,10 +25,12 @@ icrl-gen = "icrl_generator:APP"
 
 [tool.setuptools]
 packages = ["icrl_generator"]
-include-package-data = true
+include-package-data = false
 
 [tool.setuptools.package-data]
 icrl_generator = ["prompts/*.txt"]
+
+[tool.setuptools_scm]
 
 [build-system]
 requires = [
