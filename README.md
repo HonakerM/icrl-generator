@@ -1,13 +1,13 @@
 # ICRL Image Generator
 
-This project generates "thought of the day" images for the **International Consciousness Research Laboratories (ICRL)**.  
+This project generates polished "thought of the day" images for the **International Consciousness Research Laboratories (ICRL)**.  
 It uses **LiteLLM** to:
 
 1. Turn a text thought into an *image prompt*
 2. Generate an AI image
 3. Blend the generated image with an overlay image
 
-The script is exposed as a command-line tool using **Typer**.
+The script is exposed as a command-line tool using **Typer** and can be run locally or via Docker.
 
 ---
 
@@ -22,10 +22,13 @@ The script is exposed as a command-line tool using **Typer**.
   - the raw generated image (optional)
   - the generated image prompt (optional)
 - Easy CLI interface
+- Docker support with multi-stage builds for minimal image size
 
 ---
 
 ## Installation
+
+### Local Installation
 
 ```bash
 git clone https://github.com/HonakerM/icrl-generator.git
@@ -33,9 +36,25 @@ cd icrl-generator
 pip install .
 ```
 
+### Docker
+
+Pull the pre-built image from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/your-username/icrl-generator:latest
+```
+
+Or build locally:
+
+```bash
+docker build -t icrl-generator .
+```
+
+---
+
 ## Usage
 
-### CLI - Single Image Generation
+### Local CLI - Single Image Generation
 
 After installation, you can run the following command to generate an image.
 
@@ -71,7 +90,7 @@ To view all options and their descriptions:
 python -m icrl_generator generate-image --help
 ```
 
-### CLI - Batch Generation
+### Local CLI - Batch Generation
 
 To generate multiple images from a CSV file:
 
@@ -109,7 +128,73 @@ To view all options:
 python -m icrl_generator generate-batch --help
 ```
 
-### Code
+### Docker - Single Image Generation
+
+Linux/Mac:
+```bash
+docker run --rm \
+  -v $(pwd)/overlay.png:/app/overlays/overlay.png:ro \
+  -v $(pwd)/output:/app/output \
+  -e OPENAI_API_KEY="sk-your-api-key-here" \
+  ghcr.io/your-username/icrl-generator:latest \
+  generate-image \
+  "Never assume that what you see on a person's face is what lies in their heart." \
+  /app/overlays/overlay.png \
+  /app/output/result.png \
+  --alpha 50 \
+  --log-level INFO
+```
+
+Windows PowerShell:
+```powershell
+docker run --rm `
+  -v ${PWD}/overlay.png:/app/overlays/overlay.png:ro `
+  -v ${PWD}/output:/app/output `
+  -e OPENAI_API_KEY="sk-your-api-key-here" `
+  ghcr.io/your-username/icrl-generator:latest `
+  generate-image `
+  "Never assume that what you see on a person's face is what lies in their heart." `
+  /app/overlays/overlay.png `
+  /app/output/result.png `
+  --alpha 50 `
+  --log-level INFO
+```
+
+### Docker - Batch Generation
+
+Linux/Mac:
+```bash
+docker run --rm \
+  -v $(pwd)/thoughts.csv:/app/input/thoughts.csv:ro \
+  -v $(pwd)/overlay.png:/app/overlays/overlay.png:ro \
+  -v $(pwd)/output:/app/output \
+  -e OPENAI_API_KEY="sk-your-api-key-here" \
+  ghcr.io/your-username/icrl-generator:latest \
+  generate-batch \
+  /app/input/thoughts.csv \
+  /app/overlays/overlay.png \
+  /app/output \
+  --alpha 50 \
+  --log-level INFO
+```
+
+Windows PowerShell:
+```powershell
+docker run --rm `
+  -v ${PWD}/thoughts.csv:/app/input/thoughts.csv:ro `
+  -v ${PWD}/overlay.png:/app/overlays/overlay.png:ro `
+  -v ${PWD}/output:/app/output `
+  -e OPENAI_API_KEY="sk-your-api-key-here" `
+  ghcr.io/your-username/icrl-generator:latest `
+  generate-batch `
+  /app/input/thoughts.csv `
+  /app/overlays/overlay.png `
+  /app/output `
+  --alpha 50 `
+  --log-level INFO
+```
+
+### Python Code
 
 If you want to call it from Python directly:
 
@@ -138,6 +223,25 @@ The `--alpha` parameter controls the blend between the generated image and the o
 
 ![./image.png](./image.png)
 
+---
+
+## Docker Volume Mounts
+
+When using Docker, you need to mount directories and files:
+
+| Mount | Purpose | Read/Write |
+|-------|---------|-----------|
+| `-v $(pwd)/overlay.png:/app/overlays/overlay.png:ro` | Input overlay image | Read-only |
+| `-v $(pwd)/thoughts.csv:/app/input/thoughts.csv:ro` | Input CSV file for batch | Read-only |
+| `-v $(pwd)/output:/app/output` | Output directory for generated images | Read-write |
+
+**Before running Docker commands:**
+1. Create the output directory: `mkdir -p output`
+2. Place your `overlay.png` in the current directory
+3. For batch processing, place your `thoughts.csv` in the current directory
+
+---
+
 ## Requirements
 
 * Python 3.10+
@@ -145,6 +249,8 @@ The `--alpha` parameter controls the blend between the generated image and the o
 * Pillow
 * Typer
 * tqdm (for batch processing progress bars)
+
+---
 
 ## Command Reference
 
@@ -181,3 +287,27 @@ Generate multiple images from a CSV file.
 - `--prompt-gen-model TEXT`: LLM model for prompt generation (default: gpt-4o-mini)
 - `--image-gen-model TEXT`: Image generation model (default: gpt-image-1-mini)
 - `--alpha INTEGER`: Blend alpha value 0-100 (default: 50)
+
+---
+
+## Development
+
+### Building the Docker Image
+
+```bash
+docker build -t icrl-generator .
+```
+
+The Dockerfile uses multi-stage builds to create a minimal runtime image by:
+1. Building dependencies in a builder stage with compilation tools
+2. Copying only the runtime files to a slim final image
+3. Excluding build tools to minimize image size
+
+### CI/CD
+
+This project uses GitHub Actions to automatically build and publish Docker images to GitHub Container Registry (GHCR) on:
+- Pushes to `main` or `develop` branches
+- Version tags (e.g., `v1.0.0`)
+- Pull requests (build only, no push)
+
+Images are published to: `ghcr.io/your-username/icrl-generator`

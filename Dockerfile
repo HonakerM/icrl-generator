@@ -1,6 +1,6 @@
 # Multi-stage build for ICRL Image Generator
 # Stage 1: Builder - Install dependencies and build
-FROM python:3.11-slim as build
+FROM python:3.11-slim AS build
 
 # Set working directory
 WORKDIR /build
@@ -10,18 +10,20 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
     g++ \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-COPY .git .
+COPY LICENSE .
 COPY README.md .
 COPY pyproject.toml .
-COPY icrl_generator/ .
+COPY .git ./.git/
+COPY icrl_generator/ ./icrl_generator/
 
 # Install dependencies to a specific directory
 RUN pip install --no-cache-dir --no-compile --prefix=/install ".[aws]" 
 
 # Stage 2: Runtime - Create minimal runtime image
-FROM python:3.11-slim as release
+FROM python:3.11-slim AS release
 
 # Set working directory
 WORKDIR /app
