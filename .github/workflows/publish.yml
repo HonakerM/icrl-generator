@@ -1,5 +1,12 @@
 name: Publish
 
+
+env:
+  # Use GitHub Container Registry
+  REGISTRY: ghcr.io
+  # Image name will be: ghcr.io/<owner>/<repo-name>
+  IMAGE_NAME: ${{ github.repository }}
+
 on:
   push:
     tags:
@@ -25,13 +32,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Optional: Log in to Docker Hub (uncomment if you want both registries)
-      # - name: Log in to Docker Hub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
