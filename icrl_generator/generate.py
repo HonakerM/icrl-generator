@@ -1,11 +1,16 @@
 import base64
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Annotated
 from litellm import completion, image_generation
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from io import BytesIO
 from pathlib import Path
 from logging import getLogger, _nameToLevel, basicConfig
-from typer import Typer
+from tqdm import tqdm
+from typer import Typer, Option
 import enum
+import csv
 
 # Typer App for easy CLI: https://typer.tiangolo.com/
 APP = Typer()
@@ -19,80 +24,6 @@ IMAGE_PROMPT_GEN_SYSTEM_PROMPT = (PROMPT_DIT / "image_gen_system.txt").read_text
 IMAGE_PROMPT_GEN_USER_PROMPT = (PROMPT_DIT / "image_gen_user.txt").read_text()
 
 
-def add_text_to_image(img: Image, text: str):
-    """add_text_to_image is a helper function to add text to the top right of the image. This
-     edits the image inplace.
-
-    Args:
-        img (Image): The image to mutate
-        text (str): The text to add. This will be wrapped
-    """
-    draw = ImageDraw.Draw(img)
-
-    relative_font_scale = 0.05
-    padding_ratio = 0.02
-    max_width_ratio = 0.45
-
-    # Compute font size based on image height
-    img_w, img_h = img.size
-    font_size = int(img_h * relative_font_scale)
-    font = ImageFont.load_default(font_size)
-
-    # Max wrap width in pixels
-    max_width_px = int(img_w * max_width_ratio)
-
-    # ---- TEXT WRAPPING ----
-    words = text.split()
-    lines = []
-    current = ""
-
-    for word in words:
-        test_line = current + (" " if current else "") + word
-        bbox = draw.textbbox((0, 0), test_line, font=font)
-        test_width = bbox[2] - bbox[0]
-
-        if test_width <= max_width_px:
-            current = test_line
-        else:
-            lines.append(current)
-            current = word
-
-    if current:
-        lines.append(current)
-
-    # Measure total wrapped text block
-    line_sizes = []  # store (w, h)
-    max_line_width = 0
-    total_height = 0
-
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=font)
-        w = bbox[2] - bbox[0]
-        h = bbox[3] - bbox[1]
-        line_sizes.append((w, h))
-        total_height += h
-        if w > max_line_width:
-            max_line_width = w
-
-    # Padding
-    pad = int(img_w * padding_ratio)
-
-    # Top-right block origin (block width = max_line_width)
-    x_block = img_w - max_line_width - pad
-    y_block = pad
-
-    # Draw each centered line
-    offset_y = y_block
-    for i, line in enumerate(lines):
-        line_w, line_h = line_sizes[i]
-
-        # center this line within the block
-        x_line = x_block + (max_line_width - line_w) // 2
-
-        draw.text((x_line, offset_y), line, font=font, fill="white")
-        offset_y += line_h
-
-
 # Get default list of log levels
 LogLevelEnum = enum.Enum("LogLevelEnum", {key: key for key in _nameToLevel})
 
@@ -100,12 +31,14 @@ LogLevelEnum = enum.Enum("LogLevelEnum", {key: key for key in _nameToLevel})
 @APP.command()
 def generate_image(
     thought: str,
+    overlay: Path,
     output: Path,
     image_prompt_output: Path | None = None,
     raw_image_output: Path | None = None,
-    log_level: LogLevelEnum = LogLevelEnum.INFO,
+    log_level: LogLevelEnum | None = LogLevelEnum.INFO,
     prompt_gen_model: str = "gpt-4o-mini",
     image_gen_model: str = "gpt-image-1-mini",
+    alpha: Annotated[int, Option(min=0, max=100)] = 50,
 ):
     """Generate a image for the thought of the day for the International Consciousness Research Laboratories (ICRL). The image
     can be saved in any format supported by PIL: https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
@@ -117,7 +50,8 @@ def generate_image(
         raw_image_output (Path | None, optional): Optional debug path for storing the raw image. Defaults to None.
         log_level (LogLevelEnum, optional): Log level. Defaults to "INFO".
     """
-    basicConfig(level=log_level.value)
+    if log_level:
+        basicConfig(level=log_level.value)
 
     # Parse the prompts and apply formatting
     system_prompt = IMAGE_PROMPT_GEN_SYSTEM_PROMPT
@@ -137,8 +71,7 @@ def generate_image(
     )
 
     image_prompt = prompt_response.choices[0].message["content"]
-    LOGGER.debug("Generated Image Prompt")
-    print("\nGenerated image prompt:\n%s\n", image_prompt)
+    LOGGER.debug("Generated image prompt:\n%s\n", image_prompt)
     if image_prompt_output:
         image_prompt_output.write_text(image_prompt)
 
@@ -154,8 +87,68 @@ def generate_image(
     if raw_image_output:
         img.save(raw_image_output)
 
-    LOGGER.info("Updating Image with Text")
-    add_text_to_image(img, thought)
+    LOGGER.info("Blending Image")
+    overlay = Image.open(overlay.open("rb")).convert("RGB")
+    overlay = overlay.resize(img.size)
+    img = Image.blend(img, overlay, alpha / 100)
 
     img.save(output)
     LOGGER.info("Saved Output Image to %s", str(output))
+
+
+@dataclass
+class ThoughtData:
+    thought: str
+    publish_date: datetime
+
+
+@APP.command()
+def generate_batch(
+    input: Path,
+    overlay: Path,
+    output_folder: Path,
+    include_image_prompt: bool = False,
+    include_raw_image: bool = False,
+    log_level: LogLevelEnum = LogLevelEnum.INFO,
+    prompt_gen_model: str = "gpt-4o-mini",
+    image_gen_model: str = "gpt-image-1-mini",
+    alpha: Annotated[int, Option(min=0, max=100)] = 50,
+):
+    basicConfig(level=log_level.value)
+
+    LOGGER.info("Gathering Thoughts")
+    thoughts: list[ThoughtData] = []
+    with input.open("r") as input_stream:
+        csv_reader = csv.reader(input_stream)
+
+        for idx, row in enumerate(csv_reader):
+            # Skip first row
+            if idx == 0:
+                continue
+
+            thought = ThoughtData(
+                thought=row[1], publish_date=datetime.strptime(row[-2], "%Y-%m-%d")
+            )
+            thoughts.append(thought)
+    thoughts.sort(key=lambda td: td.publish_date)
+
+    LOGGER.info("Generating Images")
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    for thought in tqdm(thoughts):
+        publish_str = thought.publish_date.strftime("%Y_%m_%d")
+        image_output = output_folder / f"{publish_str}.png"
+        image_prompt_path = output_folder / f"{publish_str}_image_prompt.txt"
+        raw_image_output = output_folder / f"{publish_str}_raw.png"
+
+        generate_image(
+            thought.thought,
+            overlay=overlay,
+            output=image_output,
+            image_prompt_output=image_prompt_path if include_image_prompt else None,
+            raw_image_output=raw_image_output if include_raw_image else None,
+            log_level=None,
+            prompt_gen_model=prompt_gen_model,
+            image_gen_model=image_gen_model,
+            alpha=alpha,
+        )
