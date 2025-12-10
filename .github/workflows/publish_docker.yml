@@ -18,6 +18,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+    if: github.event_name == 'release' && github.event.action == 'published'
 
     steps:
       - name: Checkout repository
