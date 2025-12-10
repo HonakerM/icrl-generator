@@ -3,20 +3,30 @@ from litellm import completion, image_generation
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from pathlib import Path
-from logging import getLogger, INFO, _nameToLevel, basicConfig
-from typer import Typer, Option
+from logging import getLogger, _nameToLevel, basicConfig
+from typer import Typer
 import enum
 
+# Typer App for easy CLI: https://typer.tiangolo.com/
 APP = Typer()
-LOGGER = getLogger("LOG")
+# Generic logger for debugging
+LOGGER = getLogger(__file__)
 
+# Get raw prompt text. These prompts contain template strings like `{thought}` which
+# are replaced during runtime
 PROMPT_DIT = Path(__file__).parent / "prompts"
 IMAGE_PROMPT_GEN_SYSTEM_PROMPT = (PROMPT_DIT / "image_gen_system.txt").read_text()
 IMAGE_PROMPT_GEN_USER_PROMPT = (PROMPT_DIT / "image_gen_user.txt").read_text()
 
-LogLevelEnum = enum.Enum('LogLevelEnum', {key:key for key in _nameToLevel})
 
 def add_text_to_image(img: Image, text: str):
+    """add_text_to_image is a helper function to add text to the top right of the image. This
+     edits the image inplace.
+
+    Args:
+        img (Image): The image to mutate
+        text (str): The text to add. This will be wrapped
+    """
     draw = ImageDraw.Draw(img)
 
     relative_font_scale = 0.05
@@ -82,6 +92,11 @@ def add_text_to_image(img: Image, text: str):
         draw.text((x_line, offset_y), line, font=font, fill="white")
         offset_y += line_h
 
+
+# Get default list of log levels
+LogLevelEnum = enum.Enum("LogLevelEnum", {key: key for key in _nameToLevel})
+
+
 @APP.command()
 def generate_image(
     thought: str,
@@ -89,10 +104,22 @@ def generate_image(
     image_prompt_output: Path | None = None,
     raw_image_output: Path | None = None,
     log_level: LogLevelEnum = LogLevelEnum.INFO,
+    prompt_gen_model: str = "gpt-4o-mini",
+    image_gen_model: str = "gpt-image-1-mini",
 ):
-    """Generate a image for the thought of the day for the International Consciousness Research Laboratories (ICRL)."""
+    """Generate a image for the thought of the day for the International Consciousness Research Laboratories (ICRL). The image
+    can be saved in any format supported by PIL: https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
+
+    Args:
+        thought (str): The thought to use for generation
+        output (Path): The output image path
+        image_prompt_output (Path | None, optional): Optional debug path for storing the generated image prompt. Defaults to None.
+        raw_image_output (Path | None, optional): Optional debug path for storing the raw image. Defaults to None.
+        log_level (LogLevelEnum, optional): Log level. Defaults to "INFO".
+    """
     basicConfig(level=log_level.value)
 
+    # Parse the prompts and apply formatting
     system_prompt = IMAGE_PROMPT_GEN_SYSTEM_PROMPT
     LOGGER.debug("System Prompt:\n%s\n", system_prompt)
     user_prompt = IMAGE_PROMPT_GEN_USER_PROMPT.format(thought=thought)
@@ -104,7 +131,7 @@ def generate_image(
 
     LOGGER.info("Generating Image Prompt")
     prompt_response = completion(
-        model="gpt-4o-mini",  # any LLM available through LiteLLM
+        model=prompt_gen_model,  # any LLM available through LiteLLM
         messages=prompts,
         temperature=0.9,
     )
@@ -117,7 +144,7 @@ def generate_image(
 
     LOGGER.info("Generating Image")
     img_result = image_generation(
-        model="gpt-image-1-mini",  # Any image model supported by LiteLLM
+        model=image_gen_model,  # Any image model supported by LiteLLM
         prompt=image_prompt,
         quality="low",
         size="1024x1024",
