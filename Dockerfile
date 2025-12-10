@@ -12,9 +12,10 @@ RUN apt-get update && \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+COPY .git .
 COPY README.md .
 COPY pyproject.toml .
-COPY icrl_generator/ ./icrl_generator/
+COPY icrl_generator/ .
 
 # Install dependencies to a specific directory
 RUN pip install --no-cache-dir --no-compile --prefix=/install ".[aws]" 
