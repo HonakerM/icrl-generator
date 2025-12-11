@@ -47,7 +47,7 @@ pip install .
 Pull the pre-built image from GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/your-username/icrl-generator:latest
+docker pull ghcr.io/honakerm/icrl-generator:latest
 ```
 
 Or build locally:
@@ -142,7 +142,7 @@ docker run --rm \
   -v $(pwd)/overlay.png:/app/overlays/overlay.png:ro \
   -v $(pwd)/output:/app/output \
   -e OPENAI_API_KEY="sk-your-api-key-here" \
-  ghcr.io/your-username/icrl-generator:latest \
+  ghcr.io/honakerm/icrl-generator:latest \
   generate-image \
   "Never assume that what you see on a person's face is what lies in their heart." \
   /app/overlays/overlay.png \
@@ -157,7 +157,7 @@ docker run --rm `
   -v ${PWD}/overlay.png:/app/overlays/overlay.png:ro `
   -v ${PWD}/output:/app/output `
   -e OPENAI_API_KEY="sk-your-api-key-here" `
-  ghcr.io/your-username/icrl-generator:latest `
+  ghcr.io/honakerm/icrl-generator:latest `
   generate-image `
   "Never assume that what you see on a person's face is what lies in their heart." `
   /app/overlays/overlay.png `
@@ -175,7 +175,7 @@ docker run --rm \
   -v $(pwd)/overlay.png:/app/overlays/overlay.png:ro \
   -v $(pwd)/output:/app/output \
   -e OPENAI_API_KEY="sk-your-api-key-here" \
-  ghcr.io/your-username/icrl-generator:latest \
+  ghcr.io/honakerm/icrl-generator:latest \
   generate-batch \
   /app/input/thoughts.csv \
   /app/overlays/overlay.png \
@@ -191,7 +191,7 @@ docker run --rm `
   -v ${PWD}/overlay.png:/app/overlays/overlay.png:ro `
   -v ${PWD}/output:/app/output `
   -e OPENAI_API_KEY="sk-your-api-key-here" `
-  ghcr.io/your-username/icrl-generator:latest `
+  ghcr.io/honakerm/icrl-generator:latest `
   generate-batch `
   /app/input/thoughts.csv `
   /app/overlays/overlay.png `
@@ -316,4 +316,4 @@ This project uses GitHub Actions to automatically build and publish Docker image
 - Version tags (e.g., `v1.0.0`)
 - Pull requests (build only, no push)
 
-Images are published to: `ghcr.io/your-username/icrl-generator`
+Images are published to: `ghcr.io/honakerm/icrl-generator`
