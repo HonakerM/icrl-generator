@@ -28,7 +28,13 @@ The script is exposed as a command-line tool using **Typer** and can be run loca
 
 ## Installation
 
-### Local Installation
+### PyPi
+
+```bash
+pip install icrl-generator
+```
+
+### Local Build
 
 ```bash
 git clone https://github.com/HonakerM/icrl-generator.git
